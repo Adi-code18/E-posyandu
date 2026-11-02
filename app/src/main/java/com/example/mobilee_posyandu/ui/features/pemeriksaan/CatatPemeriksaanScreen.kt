@@ -22,19 +22,39 @@ import com.example.mobilee_posyandu.ui.theme.PosyanduPrimary
 import com.example.mobilee_posyandu.ui.theme.TextPrimary
 import com.example.mobilee_posyandu.ui.theme.TextSecondary
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mobilee_posyandu.ui.components.HttpStatusCodeInfo
+import com.example.mobilee_posyandu.ui.components.HttpStatusLandingView
+
 @Composable
 fun CatatPemeriksaanScreen(
     nik: String,
     onNavigateBack: () -> Unit,
-    repository: PosyanduRepository = PosyanduRepository.getInstance()
+    viewModel: PemeriksaanViewModel = viewModel()
 ) {
-    val wargaList by repository.wargaList.collectAsState()
-    val warga = wargaList.find { it.nik == nik }
+    val warga = viewModel.getWarga(nik)
 
     if (warga == null) {
-        onNavigateBack()
+        Scaffold(
+            topBar = {
+                PosyanduTopBar(
+                    title = "Data Tidak Ditemukan",
+                    canNavigateBack = true,
+                    onNavigateBack = onNavigateBack
+                )
+            }
+        ) { innerPadding ->
+            HttpStatusLandingView(
+                statusInfo = HttpStatusCodeInfo.NOT_FOUND_404,
+                onPrimaryAction = onNavigateBack,
+                onSecondaryAction = onNavigateBack,
+                modifier = Modifier.padding(innerPadding)
+            )
+        }
         return
     }
+
+    val uiState by viewModel.uiState.collectAsState()
 
     var tanggal by remember { mutableStateOf("31 Oktober 2026") }
     var bb by remember { mutableStateOf("") }
@@ -389,7 +409,7 @@ fun CatatPemeriksaanScreen(
 
                             when (warga.status) {
                                 KategoriWarga.BALITA -> {
-                                    repository.tambahPemeriksaanBalita(
+                                    viewModel.submitBalita(
                                         PemeriksaanBalita(
                                             idPeriksa = newId,
                                             nik = nik,
@@ -400,11 +420,12 @@ fun CatatPemeriksaanScreen(
                                             la = la.toDoubleOrNull() ?: 0.0,
                                             lp = lp.toDoubleOrNull() ?: 0.0,
                                             status = statusBalita.ifBlank { "Gizi Baik (Normal)" }
-                                        )
+                                        ),
+                                        onSuccess = onNavigateBack
                                     )
                                 }
                                 KategoriWarga.IBU_HAMIL -> {
-                                    repository.tambahPemeriksaanBumil(
+                                    viewModel.submitBumil(
                                         PemeriksaanBumil(
                                             idPeriksa = newId,
                                             nik = nik,
@@ -416,11 +437,12 @@ fun CatatPemeriksaanScreen(
                                             lp = 0.0,
                                             tensi = tensiBumil,
                                             status = statusBumil.ifBlank { "Normal" }
-                                        )
+                                        ),
+                                        onSuccess = onNavigateBack
                                     )
                                 }
                                 KategoriWarga.REMAJA -> {
-                                    repository.tambahPemeriksaanRemaja(
+                                    viewModel.submitRemaja(
                                         PemeriksaanRemaja(
                                             idPeriksa = newId,
                                             nik = nik,
@@ -431,11 +453,12 @@ fun CatatPemeriksaanScreen(
                                             hemoglobin = hbRemaja.toDoubleOrNull() ?: 0.0,
                                             gula = gulaRemaja.toDoubleOrNull() ?: 0.0,
                                             status = statusRemaja.ifBlank { "Normal" }
-                                        )
+                                        ),
+                                        onSuccess = onNavigateBack
                                     )
                                 }
                                 KategoriWarga.LANSIA -> {
-                                    repository.tambahPemeriksaanLansia(
+                                    viewModel.submitLansia(
                                         PemeriksaanLansia(
                                             idPeriksa = newId,
                                             nik = nik,
@@ -446,24 +469,33 @@ fun CatatPemeriksaanScreen(
                                             gula = gulaLansia.toDoubleOrNull() ?: 0.0,
                                             riwayatPenyakit = riwayatPenyakit,
                                             status = statusLansia.ifBlank { "Terkontrol" }
-                                        )
+                                        ),
+                                        onSuccess = onNavigateBack
                                     )
                                 }
                             }
-                            onNavigateBack()
                         },
+                        enabled = !uiState.isSubmitting,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PosyanduPrimary)
                     ) {
-                        Text(
-                            text = "Simpan Hasil Pemeriksaan",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = Color.White
-                        )
+                        if (uiState.isSubmitting) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(22.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Simpan Hasil Pemeriksaan",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }

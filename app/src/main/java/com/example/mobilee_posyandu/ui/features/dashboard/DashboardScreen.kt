@@ -27,6 +27,8 @@ import com.example.mobilee_posyandu.ui.components.PosyanduTopBar
 import com.example.mobilee_posyandu.ui.components.StatCard
 import com.example.mobilee_posyandu.ui.theme.*
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+
 @Composable
 fun DashboardScreen(
     onNavigateToWargaList: () -> Unit,
@@ -36,25 +38,16 @@ fun DashboardScreen(
     onNavigateToDetailWarga: (String) -> Unit,
     onNavigateToStatusCodes: () -> Unit = {},
     onLogout: () -> Unit,
-    repository: PosyanduRepository = PosyanduRepository.getInstance()
+    viewModel: DashboardViewModel = viewModel()
 ) {
-    val wargaList by repository.wargaList.collectAsState()
-    val currentUser by repository.currentUser.collectAsState()
-    val jadwalList by repository.jadwalList.collectAsState()
-
-    val countBalita = wargaList.count { it.status == KategoriWarga.BALITA }
-    val countBumil = wargaList.count { it.status == KategoriWarga.IBU_HAMIL }
-    val countRemaja = wargaList.count { it.status == KategoriWarga.REMAJA }
-    val countLansia = wargaList.count { it.status == KategoriWarga.LANSIA }
-
-    val isOnline by repository.isOnline.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
             PosyanduTopBar(
                 title = "e-Posyandu",
                 actions = {
-                    IconButton(onClick = { repository.refreshFromApi() }) {
+                    IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Sinkronisasi Data API",
@@ -62,8 +55,7 @@ fun DashboardScreen(
                         )
                     }
                     IconButton(onClick = {
-                        repository.logout()
-                        onLogout()
+                        viewModel.logout(onLogout)
                     }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
@@ -123,11 +115,11 @@ fun DashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Surface(
-                                    color = if (isOnline) Color(0xFF10B981) else Color(0xFFF59E0B),
+                                    color = if (uiState.isOnline) Color(0xFF10B981) else Color(0xFFF59E0B),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text(
-                                        text = if (isOnline) "● API Aktif" else "○ Mode Lokal",
+                                        text = if (uiState.isOnline) "● API Aktif" else "○ Mode Lokal",
                                         color = Color.White,
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
@@ -136,7 +128,7 @@ fun DashboardScreen(
                                 }
                             }
                             Text(
-                                text = currentUser ?: "Petugas Posyandu",
+                                text = uiState.currentUser,
                                 color = Color.White,
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold
@@ -262,7 +254,7 @@ fun DashboardScreen(
                 ) {
                     StatCard(
                         title = "Balita",
-                        count = countBalita,
+                        count = uiState.countBalita,
                         icon = Icons.Default.ChildCare,
                         accentColor = BalitaColor,
                         modifier = Modifier.weight(1f),
@@ -270,7 +262,7 @@ fun DashboardScreen(
                     )
                     StatCard(
                         title = "Ibu Hamil",
-                        count = countBumil,
+                        count = uiState.countBumil,
                         icon = Icons.Default.PregnantWoman,
                         accentColor = BumilColor,
                         modifier = Modifier.weight(1f),
@@ -286,7 +278,7 @@ fun DashboardScreen(
                 ) {
                     StatCard(
                         title = "Remaja",
-                        count = countRemaja,
+                        count = uiState.countRemaja,
                         icon = Icons.Default.Groups,
                         accentColor = RemajaColor,
                         modifier = Modifier.weight(1f),
@@ -294,7 +286,7 @@ fun DashboardScreen(
                     )
                     StatCard(
                         title = "Lansia",
-                        count = countLansia,
+                        count = uiState.countLansia,
                         icon = Icons.Default.Elderly,
                         accentColor = LansiaColor,
                         modifier = Modifier.weight(1f),
@@ -305,7 +297,7 @@ fun DashboardScreen(
 
             // Upcoming Schedule Card
             item {
-                val nextJadwal = jadwalList.firstOrNull()
+                val nextJadwal = uiState.nextJadwal
                 if (nextJadwal != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -400,7 +392,7 @@ fun DashboardScreen(
                         color = TextPrimary
                     )
                     Text(
-                        text = "Semua (${wargaList.size})",
+                        text = "Semua (${uiState.countBalita + uiState.countBumil + uiState.countRemaja + uiState.countLansia})",
                         fontSize = 13.sp,
                         color = PosyanduPrimary,
                         fontWeight = FontWeight.SemiBold,
@@ -409,7 +401,7 @@ fun DashboardScreen(
                 }
             }
 
-            items(wargaList.take(3)) { warga ->
+            items(uiState.recentWarga) { warga ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()

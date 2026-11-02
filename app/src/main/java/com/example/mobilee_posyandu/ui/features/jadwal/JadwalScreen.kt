@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mobilee_posyandu.data.repository.IPosyanduRepository
 import com.example.mobilee_posyandu.data.repository.PosyanduRepository
 import com.example.mobilee_posyandu.ui.components.PosyanduTopBar
 import com.example.mobilee_posyandu.ui.theme.PosyanduPrimary
@@ -27,7 +28,7 @@ import com.example.mobilee_posyandu.ui.theme.TextSecondary
 @Composable
 fun JadwalScreen(
     onNavigateBack: () -> Unit,
-    repository: PosyanduRepository = PosyanduRepository.getInstance()
+    repository: IPosyanduRepository = PosyanduRepository.getInstance()
 ) {
     val jadwalList by repository.jadwalList.collectAsState()
 

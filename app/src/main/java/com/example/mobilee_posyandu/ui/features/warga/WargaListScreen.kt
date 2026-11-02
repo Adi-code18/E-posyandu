@@ -27,26 +27,16 @@ import com.example.mobilee_posyandu.ui.theme.PosyanduPrimary
 import com.example.mobilee_posyandu.ui.theme.TextPrimary
 import com.example.mobilee_posyandu.ui.theme.TextSecondary
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+
 @Composable
 fun WargaListScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
     onNavigateToTambah: () -> Unit,
-    repository: PosyanduRepository = PosyanduRepository.getInstance()
+    viewModel: WargaViewModel = viewModel()
 ) {
-    val wargaList by repository.wargaList.collectAsState()
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedKategori by remember { mutableStateOf<KategoriWarga?>(null) }
-
-    val filteredList = remember(wargaList, searchQuery, selectedKategori) {
-        wargaList.filter { warga ->
-            val matchSearch = searchQuery.isBlank() ||
-                    warga.namaLengkap.contains(searchQuery, ignoreCase = true) ||
-                    warga.nik.contains(searchQuery)
-            val matchCategory = selectedKategori == null || warga.status == selectedKategori
-            matchSearch && matchCategory
-        }
-    }
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -74,8 +64,8 @@ fun WargaListScreen(
         ) {
             // Search Input
             OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+                value = uiState.searchQuery,
+                onValueChange = { viewModel.onSearchQueryChange(it) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -84,8 +74,8 @@ fun WargaListScreen(
                     Icon(Icons.Default.Search, contentDescription = null, tint = PosyanduPrimary)
                 },
                 trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
+                    if (uiState.searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
                             Icon(Icons.Default.Close, contentDescription = "Clear")
                         }
                     }
@@ -108,9 +98,9 @@ fun WargaListScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
-                    selected = selectedKategori == null,
-                    onClick = { selectedKategori = null },
-                    label = { Text("Semua (${wargaList.size})") },
+                    selected = uiState.selectedCategory == null,
+                    onClick = { viewModel.onCategorySelect(null) },
+                    label = { Text("Semua (${uiState.wargaList.size})") },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = PosyanduPrimary,
                         selectedLabelColor = Color.White
@@ -118,11 +108,11 @@ fun WargaListScreen(
                 )
 
                 KategoriWarga.entries.forEach { kategori ->
-                    val isSelected = selectedKategori == kategori
-                    val count = wargaList.count { it.status == kategori }
+                    val isSelected = uiState.selectedCategory == kategori
+                    val count = uiState.wargaList.count { it.status == kategori }
                     FilterChip(
                         selected = isSelected,
-                        onClick = { selectedKategori = if (isSelected) null else kategori },
+                        onClick = { viewModel.onCategorySelect(kategori) },
                         label = { Text("${kategori.label} ($count)") },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = kategori.badgeColor,
@@ -135,7 +125,7 @@ fun WargaListScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Warga List
-            if (filteredList.isEmpty()) {
+            if (uiState.filteredList.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -162,7 +152,7 @@ fun WargaListScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(filteredList, key = { it.nik }) { warga ->
+                    items(uiState.filteredList, key = { it.nik }) { warga ->
                         WargaItemCard(
                             warga = warga,
                             onClick = { onNavigateToDetail(warga.nik) }

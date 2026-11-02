@@ -24,51 +24,42 @@ import com.example.mobilee_posyandu.ui.components.CategoryBadge
 import com.example.mobilee_posyandu.ui.components.PosyanduTopBar
 import com.example.mobilee_posyandu.ui.theme.*
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mobilee_posyandu.ui.components.HttpStatusCodeInfo
+import com.example.mobilee_posyandu.ui.components.HttpStatusLandingView
+
 @Composable
 fun WargaDetailScreen(
     nik: String,
     onNavigateBack: () -> Unit,
     onNavigateToCatatPemeriksaan: (String) -> Unit,
-    repository: PosyanduRepository = PosyanduRepository.getInstance()
+    viewModel: WargaViewModel = viewModel()
 ) {
-    val wargaList by repository.wargaList.collectAsState()
-    val warga = wargaList.find { it.nik == nik }
-
-    // Re-observe pemeriksaan
-    val balitaList by repository.balitaPemeriksaan.collectAsState()
-    val bumilList by repository.bumilPemeriksaan.collectAsState()
-    val remajaList by repository.remajaPemeriksaan.collectAsState()
-    val lansiaList by repository.lansiaPemeriksaan.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val warga = uiState.wargaList.find { it.nik == nik }
 
     if (warga == null) {
         Scaffold(
             topBar = {
                 PosyanduTopBar(
-                    title = "Detail Profil Warga",
+                    title = "Data Tidak Ditemukan",
                     canNavigateBack = true,
                     onNavigateBack = onNavigateBack
                 )
             }
         ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Data warga tidak ditemukan")
-            }
+            HttpStatusLandingView(
+                statusInfo = HttpStatusCodeInfo.NOT_FOUND_404,
+                onPrimaryAction = onNavigateBack,
+                onSecondaryAction = onNavigateBack,
+                modifier = Modifier.padding(innerPadding)
+            )
         }
         return
     }
 
-    val riwayatPemeriksaan = remember(warga, balitaList, bumilList, remajaList, lansiaList) {
-        when (warga.status) {
-            KategoriWarga.BALITA -> balitaList.filter { it.nik == nik }
-            KategoriWarga.IBU_HAMIL -> bumilList.filter { it.nik == nik }
-            KategoriWarga.REMAJA -> remajaList.filter { it.nik == nik }
-            KategoriWarga.LANSIA -> lansiaList.filter { it.nik == nik }
-        }
+    val riwayatPemeriksaan = remember(warga) {
+        viewModel.getRiwayatPemeriksaan(nik, warga.status)
     }
 
     Scaffold(

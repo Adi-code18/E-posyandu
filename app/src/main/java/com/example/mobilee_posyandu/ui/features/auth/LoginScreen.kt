@@ -25,15 +25,15 @@ import com.example.mobilee_posyandu.ui.theme.PosyanduPrimary
 import com.example.mobilee_posyandu.ui.theme.TextPrimary
 import com.example.mobilee_posyandu.ui.theme.TextSecondary
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    repository: PosyanduRepository = PosyanduRepository.getInstance()
+    viewModel: AuthViewModel = viewModel()
 ) {
-    var username by remember { mutableStateOf("kader1") }
+    val uiState by viewModel.uiState.collectAsState()
     var password by remember { mutableStateOf("password") }
-    var selectedRole by remember { mutableStateOf("Kader Posyandu") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val roles = listOf("Kader Posyandu", "Bidan Desa", "Ketua / Admin")
 
@@ -117,17 +117,10 @@ fun LoginScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     roles.forEach { role ->
-                        val isSelected = selectedRole == role
+                        val isSelected = uiState.role == role
                         FilterChip(
                             selected = isSelected,
-                            onClick = {
-                                selectedRole = role
-                                when (role) {
-                                    "Kader Posyandu" -> username = "kader1"
-                                    "Bidan Desa" -> username = "bidan_desa"
-                                    "Ketua / Admin" -> username = "ketua"
-                                }
-                            },
+                            onClick = { viewModel.selectRole(role) },
                             label = {
                                 Text(
                                     text = role.substringBefore(" "),
@@ -147,8 +140,8 @@ fun LoginScreen(
 
                 // Username field
                 OutlinedTextField(
-                    value = username,
-                    onValueChange = { username = it },
+                    value = uiState.username,
+                    onValueChange = { viewModel.updateUsername(it) },
                     label = { Text("Username") },
                     leadingIcon = {
                         Icon(Icons.Default.Person, contentDescription = null, tint = PosyanduPrimary)
@@ -174,10 +167,10 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                if (errorMessage != null) {
+                if (uiState.errorMessage != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = errorMessage ?: "",
+                        text = uiState.errorMessage ?: "",
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 12.sp
                     )
@@ -187,25 +180,29 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        if (username.isNotBlank()) {
-                            repository.login(username, selectedRole)
-                            onLoginSuccess()
-                        } else {
-                            errorMessage = "Username tidak boleh kosong"
-                        }
+                        viewModel.login(password = password, onSuccess = onLoginSuccess)
                     },
+                    enabled = !uiState.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PosyanduPrimary)
                 ) {
-                    Text(
-                        text = "Masuk Sistem",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = "Masuk Sistem",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }

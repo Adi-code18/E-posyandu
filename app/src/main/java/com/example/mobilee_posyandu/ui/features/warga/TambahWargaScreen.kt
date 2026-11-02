@@ -26,10 +26,12 @@ import com.example.mobilee_posyandu.ui.theme.PosyanduPrimary
 import com.example.mobilee_posyandu.ui.theme.TextPrimary
 import com.example.mobilee_posyandu.ui.theme.TextSecondary
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+
 @Composable
 fun TambahWargaScreen(
     onNavigateBack: () -> Unit,
-    repository: PosyanduRepository = PosyanduRepository.getInstance()
+    viewModel: WargaViewModel = viewModel()
 ) {
     var nik by remember { mutableStateOf("") }
     var namaLengkap by remember { mutableStateOf("") }
@@ -41,7 +43,7 @@ fun TambahWargaScreen(
     var alamat by remember { mutableStateOf("Dusun Anggrek RT 01 / RW 02") }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var isSuccess by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -254,26 +256,40 @@ fun TambahWargaScreen(
                                 alamat = alamat.ifBlank { "Desa Sejahtera" }
                             )
 
-                            val success = repository.tambahWarga(newWarga)
-                            if (success) {
-                                isSuccess = true
-                                onNavigateBack()
-                            } else {
-                                errorMessage = "Warga dengan NIK $nik sudah ada!"
-                            }
+                            isLoading = true
+                            viewModel.simpanWargaBaru(
+                                warga = newWarga,
+                                onSuccess = {
+                                    isLoading = false
+                                    onNavigateBack()
+                                },
+                                onError = { err ->
+                                    isLoading = false
+                                    errorMessage = err
+                                }
+                            )
                         },
+                        enabled = !isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PosyanduPrimary)
                     ) {
-                        Text(
-                            text = "Simpan Data Warga",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = Color.White
-                        )
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(22.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Simpan Data Warga",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
